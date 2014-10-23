@@ -9,7 +9,7 @@ module RandomDates.Types
     , optCenterDate
     , optStandardDev
 
-    , DateRow
+    , DateRow(..)
     , rowTitle
     , rowDescr
     , rowDate

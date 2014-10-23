@@ -1,11 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 
 module Main where
 
 
+import           RandomDates.Random
+import           RandomDates.Types
+
 import           Opts
 
 
 main :: IO ()
-main = print =<< execParser opts
+main = do
+    rdOpts@RandomOpts{..} <- execParser opts
+    undefined
