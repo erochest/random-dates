@@ -24,6 +24,8 @@ opts' = RandomOpts
       <*> option auto (  short 's' <> long "std-dev" <> metavar "INTEGER" <> value 365
                       <> help "The standard deviations (in days) \
                               \for generating random dates. Default = 365.")
+      <*> strOption   (  short 'o' <> long "output" <> metavar "FILENAME"
+                      <> help "The file to write the random data to.")
 
 opts :: ParserInfo RandomOpts
 opts = info (helper <*> opts')

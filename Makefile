@@ -14,7 +14,7 @@ specs: build
 	./dist/build/random-dates-specs/random-dates-specs
 
 run:
-	cabal run
+	cabal run -- --n 25 --day 2014-10-23 --output dates.csv
 
 # docs:
 # generate api documentation

@@ -16,7 +16,8 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     RandomDates.Random
+  exposed-modules:     RandomDates.Output
+                     , RandomDates.Random
                      , RandomDates.Types
   -- other-modules:       
   -- other-extensions:    
@@ -26,6 +27,7 @@ library
                      , thyme
                      , old-locale
                      , conduit
+                     , conduit-extra
                      , csv-conduit
                      , containers
                      , bytestring

@@ -30,6 +30,7 @@ data RandomOpts = RandomOpts
                 { _optN           :: !Int
                 , _optCenterDate  :: !Day
                 , _optStandardDev :: !Int
+                , _optOutput      :: !String
                 } deriving (Show)
 makeLenses ''RandomOpts
 
