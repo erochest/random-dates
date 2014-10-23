@@ -4,5 +4,8 @@
 module Main where
 
 
+import           Opts
+
+
 main :: IO ()
-main = undefined
+main = print =<< execParser opts
