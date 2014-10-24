@@ -13,8 +13,8 @@ module RandomDates.Text
     , generateText_
     , generateParagraphs
     , generateParagraphs_
-    , takeNormal
     , lastCache
+    , pos
     ) where
 
 
@@ -77,29 +77,24 @@ trainChains ts = index (\(a, b, _) -> (a, b)) (\(_, _, c) -> c) $ triples ts
 randomStart :: GenIO -> MarkovChains -> IO TextPair
 randomStart g mcc = genFromTable (createStartTable mcc) g
 
-randomStart' :: GenIO -> CondensedTableV TextPair -> IO TextPair
-randomStart' = flip genFromTable
+scale :: Double -> Int -> Double
+scale total x = fromIntegral x / total
+
+sumVals :: M.HashMap k Int -> Double
+sumVals = fromIntegral . M.foldl' (+) 0
 
 createTable :: Frequencies T.Text -> CondensedTableV T.Text
-createTable freqs = tableFromProbabilities
-                  . V.fromList
-                  . M.toList
-                  $ M.map scale freqs
+createTable freqs =
+    tableFromProbabilities . V.fromList . M.toList $ M.map scale' freqs
     where
-        total :: Double
-        total   = fromIntegral $ M.foldl' (+) 0 freqs
-        scale v = fromIntegral v / total
+        scale' = scale (sumVals freqs)
 
 createStartTable :: MarkovChains -> CondensedTableV TextPair
-createStartTable mcc = tableFromProbabilities
-                     . V.fromList
-                     . M.toList
-                     $ M.map scale sizes
+createStartTable mcc =
+    tableFromProbabilities . V.fromList . M.toList $ M.map scale' sizes
     where
         sizes = M.map M.size mcc
-        total :: Double
-        total = fromIntegral $ M.foldl' (+) 0 sizes
-        scale v = fromIntegral v / total
+        scale' = scale (sumVals sizes)
 
 look :: TableCache -> MarkovChains -> TextPair
      -> (TableCache, CondensedTableV T.Text)
@@ -112,42 +107,52 @@ look cache chains pair =
     where
         insert m k v = M.insert k v m
 
-generateText :: GenIO -> MarkovChains -> IO [T.Text]
-generateText g mc = randomStart g mc >>= go M.empty
+generateText :: GenIO -> MarkovChains -> Int -> IO [T.Text]
+generateText g mc n = randomStart g mc >>= go M.empty n
     where
-        go cache pair@(_, b) = do
+        go _     0 _           = return []
+        go cache n pair@(_, b) = do
             let (cache', table) = look cache mc pair
             c <- genFromTable table g
-            (c:) <$> go cache' (b, c)
+            (c:) <$> go cache' (pred n) (b, c)
 
-generateText_ :: GenIO -> CondensedTableV TextPair -> TableCache -> MarkovChains
+generateText_ :: GenIO
+              -> CondensedTableV TextPair
+              -> TableCache
+              -> MarkovChains
+              -> Int
               -> IO [(Last TableCache, T.Text)]
-generateText_ g table cache mc = genFromTable table g >>= go cache
+generateText_ g table cache mc n = genFromTable table g >>= go cache n
     where
-        go cache pair@(_, b) = do
+        go _     0 _           = return []
+        go cache n pair@(_, b) = do
             let (cache', table) = look cache mc pair
             c <- genFromTable table g
-            ((Last (Just cache'), c) :) <$> go cache' (b, c)
+            ((Last (Just cache'), c) :) <$> go cache' (pred n) (b, c)
 
-generateParagraphs :: GenIO -> MarkovChains -> Int -> Int
+generateParagraphs :: GenIO -> MarkovChains -> Int -> Int -> Int
                    -> IO [(Last TableCache, [T.Text])]
 generateParagraphs g mc psize pvar =
     generateParagraphs_ g (createStartTable mc) mc psize pvar
 
-generateParagraphs_ :: GenIO -> CondensedTableV TextPair -> MarkovChains -> Int -> Int
+generateParagraphs_ :: GenIO -> CondensedTableV TextPair -> MarkovChains -> Int -> Int -> Int
                     -> IO [(Last TableCache, [T.Text])]
 generateParagraphs_ g table mc psize pvar = go M.empty
     where
-        go cache = do
-            p <- takeNormal g psize pvar =<< generateText_ g table cache mc
+        psize' = fromIntegral psize
+        pvar'  = fromIntegral pvar
+        go _     0 = return []
+        go cache n = do
+            p  <-  normal psize' pvar' g
+               >>= generateText_ g table cache mc . pos . truncate
             let (cache', p') = lastCache p
-            ((Last (Just cache'), p') :) <$> go cache'
-
-takeNormal :: GenIO -> Int -> Int -> [a] -> IO [a]
-takeNormal g m v xs =
-    (`L.take` xs) . truncate <$> normal (fromIntegral m) (fromIntegral v) g
+            ((Last (Just cache'), p') :) <$> go cache' (pred n)
 
 lastCache :: [(Last TableCache, a)] -> (TableCache, [a])
 lastCache = first (fold . getLast) . L.foldr accum (Last Nothing, [])
     where
         accum (c, x) (lc, xs) = (c <> lc, x:xs)
+
+pos :: Int -> Int
+pos n | n < 0     = (-1) * n
+      | otherwise = n
