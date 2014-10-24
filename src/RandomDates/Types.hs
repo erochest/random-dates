@@ -13,12 +13,16 @@ module RandomDates.Types
     , rowTitle
     , rowDescr
     , rowDate
+
+    , Frequencies
+    , MarkovChains
     ) where
 
 
 import           Control.Lens
 import qualified Data.ByteString.Char8       as B
 import           Data.CSV.Conduit.Conversion
+import qualified Data.HashMap.Strict         as HM
 import qualified Data.Map.Strict             as M
 import qualified Data.Text                   as T
 import           Data.Text.Encoding
@@ -30,6 +34,7 @@ data RandomOpts = RandomOpts
                 { _optN           :: !Int
                 , _optCenterDate  :: !Day
                 , _optStandardDev :: !Int
+                , _optTextFile    :: !String
                 , _optOutput      :: !String
                 } deriving (Show)
 makeLenses ''RandomOpts
@@ -49,3 +54,6 @@ instance ToNamedRecord DateRow where
                    ]
         where
             format = B.pack . formatTime defaultTimeLocale "%Y-%m-%d"
+
+type Frequencies a = HM.HashMap a Int
+type MarkovChains  = HM.HashMap (T.Text, T.Text) (Frequencies T.Text)
